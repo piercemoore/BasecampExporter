@@ -51,6 +51,8 @@ var bc_data = {
 };
 var base_url = "https://basecamp.com/{{acct_id}}/api/v1/projects.json";
 
+var requiredFields = [];
+
 function loadFrame( frameID , url ) {
 
 }
@@ -61,6 +63,22 @@ function progress( num ) {
 
 function log( object ) {
 	console.log( object );
+}
+
+function trimRequired( fieldName , buttonID ) {
+	var pos = requiredFields.indexOf( fieldName );
+	if( pos != -1 ) {
+		requiredFields.splice( pos , 1 );
+	}
+	if( requiredFields.length == 0 ) {
+		$("#" + buttonID ).attr("disabled","").removeClass("disabled");
+	}
+}
+
+function clearButton( buttonID ) {
+	log( "Changing button status of #" + buttonID );
+	$("#" + buttonID ).attr("disabled",false).removeClass("disabled");
+	log( $("#" + buttonID ) );
 }
 
 function parse_projects() {
@@ -81,12 +99,13 @@ function parse_projects() {
 
 function showGroup_projects() {
 	$.each( bc_data.projects , function( key , val ) {
-		var html = '<div> \
+		var html = '<div class="projectListDiv"> \
 						<iframe src=' + this.url + '></iframe> \
-						<input type="text" class="input_projectInfo" data-project="' + this.id + '" /> \
-						<a href="#" class="btn btn-success btn_action" id="storeProjectInfo" data-project="' + this.id + '">Save</a> \
-						</div>';
+						<input type="text" class="input_projectInfo" data-project="' + this.id + '" id="project_' + this.id + '" /> \
+						<a href="#" class="btn btn-success btn_action" id="storeProjectInfo" data-project="' + this.id + '" data-input="project_' + this.id + '">Save</a> \
+					</div>';
 		$("#group_project_list").append( html );
+		requiredFields.push( "project_" + this.id );
 	});
 }
 
@@ -95,8 +114,11 @@ $(document).ready( function() {
 	$("#log").click( function() {
 		log(bc_data);
 	});
+	$("#input_accountId").change( function() {
+		clearButton( "goto_2" );
+	});
 
-	$(".btn_action").click( function() {
+	$(".btn_action").live( "click" , function() {
 		var id = $(this).attr("id");
 
 		switch( id ) {
@@ -112,6 +134,7 @@ $(document).ready( function() {
 				$("#step_1").slideUp("fast");
 				$("#step_2").slideDown("fast");
 				progress( 10 );
+				requiredFields = [];
 				break;
 			case "goto_3":
 				bc_data.overviews.projects = $("#input_list_projects").val();
@@ -121,19 +144,26 @@ $(document).ready( function() {
 				$("#step_2").slideUp("fast");
 				$("#step_3").slideDown("fast");
 				progress( 20 );
+				requiredFields = [];
 				break;
 			case "goto_4":
 				$("#step_3").slideUp("fast");
 				$("#step_4").slideDown("fast");
+				requiredFields = [];
 				break;
 			case "goto_5":
 				$("#step_4").slideUp("fast");
 				$("#step_5").slideDown("fast");
+				requiredFields = [];
 				break;
 			case "storeProjectInfo":
 				var project = $(this).attr("data-project");
-				var projectInfo = $(this).parent().find("input_projectInfo").val();
+				var input_pair = $(this).attr("data-input");
+				var projectInfo = $("#" + input_pair ).val();
 				bc_data.projects[project].overview = projectInfo;
+				$(this).attr('disabled',"disabled");
+				trimRequired( "project_" + project , "goto_4" );
+				break;
 			default:
 				alert("You've clicked an unassigned button.");
 		}
@@ -180,7 +210,7 @@ $(document).ready( function() {
 	<div class="row" id="step_pressToBegin" style="">
 		<div class="span6 offset3">
 			<p>To begin exporting your data, click this giant button</p>
-			<a href="#" class="btn btn-primary btn-large btn_action" id="goto_1" style="font-size: 2em;font-family:Ubuntu;">Start Exporting my Data!</a>
+			<button class="btn btn-primary btn-large btn_action" id="goto_1" style="font-size: 2em;font-family:Ubuntu;">Start Exporting my Data!</button>
 		</div>
 	</div>
 
@@ -188,10 +218,10 @@ $(document).ready( function() {
 		<div class="span6 offset3">
 			<p>What is your Basecamp account number?</p>
 			<p style="font-size: 1em;">ex: https://www.basecamp.com/{ACCOUNT_ID}/</p>
-			<input type="text" id="input_accountId" alt="Enter your Basecamp Account Number Here" title="Enter your Basecamp Account Number Here" value="1932925" /> <!-- REMOVE THIS ACCOUNT ID IN THE FUTURE -->
-			<a href="#" class="btn btn-primary btn-large btn_action" id="goto_2" style="font-size: 2em;font-family:Ubuntu;">
+			<input type="text" id="input_accountId" alt="Enter your Basecamp Account Number Here" title="Enter your Basecamp Account Number Here" /> <button class="btn btn-success"><i class="icon-hdd icon-white"></i></button> <!-- value="1932925" REMOVE THIS ACCOUNT ID IN THE FUTURE -->
+			<button class="btn btn-primary btn-large btn_action  stepper disabled" id="goto_2" style="font-size: 2em;font-family:Ubuntu;" disabled="disabled">
 				Next step: Get your project listing
-			</a>
+			</button>
 		</div>
 	</div>
 
@@ -202,9 +232,9 @@ $(document).ready( function() {
 			<iframe id="frame_projects" src=""></iframe>
 			<input type="text" id="input_list_projects" alt="Enter the Text Here" title="Enter the Text Here" />
 
-			<a href="#" class="btn btn-primary btn-large btn_action" id="goto_3" style="font-size: 2em;font-family:Ubuntu;">
+			<button class="btn btn-primary btn-large btn_action  stepper disabled" id="goto_3" style="font-size: 2em;font-family:Ubuntu;" disabled="disabled">
 				Next step, Projects Breakdown
-			</a>
+			</button>
 		</div>
 	</div>
 
@@ -212,7 +242,7 @@ $(document).ready( function() {
 		<div class="span6 offset3">
 			<p>Looks like you have <span id="info_projectCount"></span> project(s). Copy the text below to the field under it again.</p>
 			<div id="group_project_list"></div>
-			<button class="btn btn-primary btn-large btn_action disabled" id="goto_4" style="font-size: 2em;font-family:Ubuntu;" disabled="disabled">
+			<button class="btn btn-primary btn-large btn_action  stepper disabled" id="goto_4" style="font-size: 2em;font-family:Ubuntu;" disabled="disabled">
 				Next step: To-Do Lists
 			</button>
 		</div>
@@ -221,18 +251,18 @@ $(document).ready( function() {
 	<div class="row" id="step_4" style="display:none;">
 		<div class="span6 offset3">
 			<p>To begin exporting your data, click this giant button</p>
-			<a href="#" class="btn btn-primary btn-large btn_action" id="goto_5" style="font-size: 2em;font-family:Ubuntu;">
+			<button class="btn btn-primary btn-large btn_action stepper disabled" id="goto_5" style="font-size: 2em;font-family:Ubuntu;">
 				
-			</a>
+			</button>
 		</div>
 	</div>
 
 	<div class="row" id="step_5" style="display:none;">
 		<div class="span6 offset3">
 			<p>To begin exporting your data, click this giant button</p>
-			<a href="#" class="btn btn-primary btn-large btn_action" id="goto_6" style="font-size: 2em;font-family:Ubuntu;">
+			<button class="btn btn-primary btn-large btn_action stepper disabled" id="goto_6" style="font-size: 2em;font-family:Ubuntu;">
 				
-			</a>
+			</button>
 		</div>
 	</div>
 
