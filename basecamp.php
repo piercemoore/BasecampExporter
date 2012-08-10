@@ -42,49 +42,96 @@ iframe{ width: 90%;height: 30px;}
 
 <script type="text/javascript">
 
+var bc_data = {
+	acct_id 	: 	"",
+	projects 	:	{},
+	todoLists	:	{},
+	todos 		:	{},
+	overviews 	:	{},
+};
+var base_url = "https://basecamp.com/{{acct_id}}/api/v1/projects.json";
+
 function loadFrame( frameID , url ) {
 
 }
 
-function getFrameText( frameId ) { 
+function log( object ) {
+	console.log( object );
+}
 
-	/*
-		Found this snippet at: http://skirtlesden.com/articles/selected-text-in-an-iframe
-	*/
-    var frame = document.getElementById(frameId); 
- 
-    var frameWindow = frame && frame.contentWindow; 
-    var frameDocument = frameWindow && frameWindow.document; 
- 
-    if (frameDocument) { 
-        if (frameDocument.getSelection) { 
-            // Most browsers 
-            return String(frameDocument.getSelection()); 
-        } 
-        else if (frameDocument.selection) { 
-            // Internet Explorer 8 and below 
-            return frameDocument.selection.createRange().text; 
-        } 
-        else if (frameWindow.getSelection) { 
-            // Safari 3 
-            return String(frameWindow.getSelection()); 
-        } 
-    } 
- 
-    /* Fall-through. This could happen if this function is called 
-       on a frame that doesn't exist or that isn't ready yet. */ 
-    return ''; 
+function parse_projects() {
+
+	var projects = bc_data.overviews.projects;
+	var obj = jQuery.parseJSON( projects );
+	log( obj );
+	var count = 0;
+
+	$.each( obj , function( key , val ) {
+		count++;
+		bc_data.projects[ this.id ] = this;
+	});
+
+	bc_data.overviews.projectCount = count;
+	log( bc_data );
+}
+
+function showGroup_projects() {
+	$.each( bc_data.projects , function( key , val ) {
+		var html = '<div><iframe src=' + this.url + '></iframe><input type="text" class="input_projectInfo" /></div>';
+		$("#group_project_list").append( html );
+	});
 }
 
 $(document).ready( function() { 
 
-	var base_url = "https://basecamp.com/{{acct_id}}/api/v1/projects.json";
+	$("#log").click( function() {
+		log(bc_data);
+	});
 
-	loadFrame( "frame_projects" , base_url );
+	$(".btn_action").click( function() {
+		var id = $(this).attr("id");
+
+		switch( id ) {
+			case "goto_1":
+				$("#step_pressToBegin").slideUp("fast");
+				$("#step_1").slideDown("fast");
+				break;
+			case "goto_2":
+				bc_data.acct_id = $("#input_accountId").val();
+				base_url = base_url.replace( "{{acct_id}}" , bc_data.acct_id );
+				$("#frame_projects").attr("src", base_url );
+				$("#step_1").slideUp("fast");
+				$("#step_2").slideDown("fast");
+				break;
+			case "goto_3":
+				bc_data.overviews.projects = $("#input_list_projects").val();
+				parse_projects();
+				$("#info_projectCount").text( bc_data.overviews.projectCount );
+				showGroup_projects();
+				$("#step_2").slideUp("fast");
+				$("#step_3").slideDown("fast");
+				break;
+			case "goto_4":
+				$("#step_3").slideUp("fast");
+				$("#step_4").slideDown("fast");
+				break;
+			case "goto_5":
+				$("#step_4").slideUp("fast");
+				$("#step_5").slideDown("fast");
+				break;
+			default:
+				alert("You've clicked an unassigned button.");
+		}
+
+		log( bc_data );
+	});
 
 })
 </script>
 
+<div style="width: 50px;height: 50px;position: fixed;top:10px;right:0;">
+	<a href="#" class="btn btn-primary" id="log" alt="Log the BaseCamp Data Object" title="Log the BaseCamp Data Object"><i class="icon-list-alt icon-white"></i></a>
+</div>
 <div class="container">
 	<div class="row">
 		<div class="span12 logo">
@@ -92,17 +139,18 @@ $(document).ready( function() {
 		</div>
 		<div class="span12">
 			<p>The step-by-step way to get your data out of the new Basecamp.</p>
+			
 		</div>
 	</div>
 
 	<hr />
 
-	<div class="row alert alert-warning">
+	<!--<div class="row alert alert-warning">
 		<button class="close" href="#" data-dismiss="alert"><i class="icon-remove"></i></button>
 		<p>This web utility is designed for <b><i>modern</i></b> browsers. Use in an aged browser is not tested.</p>
-	</div>
+	</div>-->
 
-	<div class="row" id="step_pressToBegin" style="display:none;">
+	<div class="row" id="step_pressToBegin" style="">
 		<div class="span6 offset3">
 			<p>To begin exporting your data, click this giant button</p>
 			<a href="#" class="btn btn-primary btn-large btn_action" id="goto_1" style="font-size: 2em;font-family:Ubuntu;">Start Exporting my Data!</a>
@@ -112,7 +160,7 @@ $(document).ready( function() {
 	<div class="row" id="step_1" style="display:none;">
 		<div class="span6 offset3">
 			<p>What is your Basecamp account number?</p>
-			<p style="font-size: 1em;">ex: https://www.basecamp.com/{ACCOUNT_ID}</p>
+			<p style="font-size: 1em;">ex: https://www.basecamp.com/{ACCOUNT_ID}/</p>
 			<input type="text" id="input_accountId" alt="Enter your Basecamp Account Number Here" title="Enter your Basecamp Account Number Here" />
 			<a href="#" class="btn btn-primary btn-large btn_action" id="goto_2" style="font-size: 2em;font-family:Ubuntu;">
 				Next step: Get your project listing
@@ -120,47 +168,42 @@ $(document).ready( function() {
 		</div>
 	</div>
 
-	<div class="row" id="step_2">
+	<div class="row" id="step_2" style="display:none;">
 		<div class="span8 offset2">
 			<p>Below is a big block of text in a textarea. Select it all, copy it, and paste it in the box below. Seriously.</p>
+			<p>This is the list of your projects, in case you were wondering.</p>
+			<iframe id="frame_projects" src=""></iframe>
+			<input type="text" id="input_list_projects" alt="Enter the Text Here" title="Enter the Text Here" />
 
-			<table class="table table-bordered">
-				<tr>
-					<td><a href="#" class="btn btn-primary"><i class="icon-book" alt="Select all Text in the Page" title="Select all Text in the Page"></i></a></td>
-					<td><iframe id="frame_projects" src="https://basecamp.com/1932925/api/v1/projects.json"></iframe></td>
-				</tr>
-				<tr>
-					<td colspan="2"><input type="text" id="input_list_projects" alt="Enter the Text Here" title="Enter the Text Here" /></td>
-				</tr>
-			</table>
-			<a href="#" class="btn btn-primary btn-large btn_action" id="goto_1" style="font-size: 2em;font-family:Ubuntu;">
-				Next step
+			<a href="#" class="btn btn-primary btn-large btn_action" id="goto_3" style="font-size: 2em;font-family:Ubuntu;">
+				Next step, Projects Breakdown
 			</a>
 		</div>
 	</div>
 
-	<div class="row" id="step_pressToBegin">
+	<div class="row" id="step_3" style="display:none;">
+		<div class="span6 offset3">
+			<p>Looks like you have <span id="info_projectCount"></span> project(s). Copy the text below to the field under it again.</p>
+			<div id="group_project_list"></div>
+			<a href="#" class="btn btn-primary btn-large btn_action" id="goto_4" style="font-size: 2em;font-family:Ubuntu;">
+				Next step: To-Do Lists
+			</a>
+		</div>
+	</div>
+
+	<div class="row" id="step_4" style="display:none;">
 		<div class="span6 offset3">
 			<p>To begin exporting your data, click this giant button</p>
-			<a href="#" class="btn btn-primary btn-large btn_action" id="goto_1" style="font-size: 2em;font-family:Ubuntu;">
+			<a href="#" class="btn btn-primary btn-large btn_action" id="goto_5" style="font-size: 2em;font-family:Ubuntu;">
 				
 			</a>
 		</div>
 	</div>
 
-	<div class="row" id="step_pressToBegin">
+	<div class="row" id="step_5" style="display:none;">
 		<div class="span6 offset3">
 			<p>To begin exporting your data, click this giant button</p>
-			<a href="#" class="btn btn-primary btn-large btn_action" id="goto_1" style="font-size: 2em;font-family:Ubuntu;">
-				
-			</a>
-		</div>
-	</div>
-
-	<div class="row" id="step_pressToBegin">
-		<div class="span6 offset3">
-			<p>To begin exporting your data, click this giant button</p>
-			<a href="#" class="btn btn-primary btn-large btn_action" id="goto_1" style="font-size: 2em;font-family:Ubuntu;">
+			<a href="#" class="btn btn-primary btn-large btn_action" id="goto_6" style="font-size: 2em;font-family:Ubuntu;">
 				
 			</a>
 		</div>
