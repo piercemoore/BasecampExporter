@@ -55,6 +55,10 @@ function loadFrame( frameID , url ) {
 
 }
 
+function progress( num ) {
+	$("#progressBar").css("width",num + "%" );
+}
+
 function log( object ) {
 	console.log( object );
 }
@@ -77,7 +81,11 @@ function parse_projects() {
 
 function showGroup_projects() {
 	$.each( bc_data.projects , function( key , val ) {
-		var html = '<div><iframe src=' + this.url + '></iframe><input type="text" class="input_projectInfo" /></div>';
+		var html = '<div> \
+						<iframe src=' + this.url + '></iframe> \
+						<input type="text" class="input_projectInfo" data-project="' + this.id + '" /> \
+						<a href="#" class="btn btn-success btn_action" id="storeProjectInfo" data-project="' + this.id + '">Save</a> \
+						</div>';
 		$("#group_project_list").append( html );
 	});
 }
@@ -95,6 +103,7 @@ $(document).ready( function() {
 			case "goto_1":
 				$("#step_pressToBegin").slideUp("fast");
 				$("#step_1").slideDown("fast");
+				progress( 5 );
 				break;
 			case "goto_2":
 				bc_data.acct_id = $("#input_accountId").val();
@@ -102,6 +111,7 @@ $(document).ready( function() {
 				$("#frame_projects").attr("src", base_url );
 				$("#step_1").slideUp("fast");
 				$("#step_2").slideDown("fast");
+				progress( 10 );
 				break;
 			case "goto_3":
 				bc_data.overviews.projects = $("#input_list_projects").val();
@@ -110,6 +120,7 @@ $(document).ready( function() {
 				showGroup_projects();
 				$("#step_2").slideUp("fast");
 				$("#step_3").slideDown("fast");
+				progress( 20 );
 				break;
 			case "goto_4":
 				$("#step_3").slideUp("fast");
@@ -119,6 +130,10 @@ $(document).ready( function() {
 				$("#step_4").slideUp("fast");
 				$("#step_5").slideDown("fast");
 				break;
+			case "storeProjectInfo":
+				var project = $(this).attr("data-project");
+				var projectInfo = $(this).parent().find("input_projectInfo").val();
+				bc_data.projects[project].overview = projectInfo;
 			default:
 				alert("You've clicked an unassigned button.");
 		}
@@ -143,7 +158,19 @@ $(document).ready( function() {
 		</div>
 	</div>
 
-	<hr />
+	<div class="row">
+		<div class="span1">
+			Start
+		</div>
+		<div class="span10">
+			<div class="progress progress-striped active">
+				<div class="bar" id="progressBar" style="width: 0%;"></div>
+			</div>
+		</div>
+		<div class="span1">
+			All done!
+		</div>
+	</div>
 
 	<!--<div class="row alert alert-warning">
 		<button class="close" href="#" data-dismiss="alert"><i class="icon-remove"></i></button>
@@ -161,7 +188,7 @@ $(document).ready( function() {
 		<div class="span6 offset3">
 			<p>What is your Basecamp account number?</p>
 			<p style="font-size: 1em;">ex: https://www.basecamp.com/{ACCOUNT_ID}/</p>
-			<input type="text" id="input_accountId" alt="Enter your Basecamp Account Number Here" title="Enter your Basecamp Account Number Here" />
+			<input type="text" id="input_accountId" alt="Enter your Basecamp Account Number Here" title="Enter your Basecamp Account Number Here" value="1932925" /> <!-- REMOVE THIS ACCOUNT ID IN THE FUTURE -->
 			<a href="#" class="btn btn-primary btn-large btn_action" id="goto_2" style="font-size: 2em;font-family:Ubuntu;">
 				Next step: Get your project listing
 			</a>
@@ -185,9 +212,9 @@ $(document).ready( function() {
 		<div class="span6 offset3">
 			<p>Looks like you have <span id="info_projectCount"></span> project(s). Copy the text below to the field under it again.</p>
 			<div id="group_project_list"></div>
-			<a href="#" class="btn btn-primary btn-large btn_action" id="goto_4" style="font-size: 2em;font-family:Ubuntu;">
+			<button class="btn btn-primary btn-large btn_action disabled" id="goto_4" style="font-size: 2em;font-family:Ubuntu;" disabled="disabled">
 				Next step: To-Do Lists
-			</a>
+			</button>
 		</div>
 	</div>
 
