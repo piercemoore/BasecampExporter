@@ -44,6 +44,7 @@ iframe{ width: 90%;height: 30px;}
 
 var bc_data = {
 	acct_id 	: 	"",
+	requiredFields : [],
 	projects 	:	{},
 	todoLists	:	{},
 	todos 		:	{},
@@ -51,7 +52,7 @@ var bc_data = {
 };
 var base_url = "https://basecamp.com/{{acct_id}}/api/v1/projects.json";
 
-var requiredFields = [];
+//var bc_data.requiredFields = [];
 
 function loadFrame( frameID , url ) {
 
@@ -66,13 +67,17 @@ function log( object ) {
 }
 
 function trimRequired( fieldName , buttonID ) {
-	var pos = requiredFields.indexOf( fieldName );
+	var rf = bc_data.requiredFields;
+	var pos = rf.indexOf( fieldName );
+	alert( rf );
 	if( pos != -1 ) {
-		requiredFields.splice( pos , 1 );
+		rf.splice( pos , 1 );
 	}
-	if( requiredFields.length == 0 ) {
+	if( rf.length == 0 ) {
 		$("#" + buttonID ).attr("disabled","").removeClass("disabled");
 	}
+	log( "Required fields: " + rf );
+	bc_data.requiredFields = rf;
 }
 
 function clearButton( buttonID ) {
@@ -98,6 +103,7 @@ function parse_projects() {
 }
 
 function showGroup_projects() {
+	var fieldList = [];
 	$.each( bc_data.projects , function( key , val ) {
 		var html = '<div class="projectListDiv"> \
 						<iframe src=' + this.url + '></iframe> \
@@ -105,17 +111,26 @@ function showGroup_projects() {
 						<a href="#" class="btn btn-success btn_action" id="storeProjectInfo" data-project="' + this.id + '" data-input="project_' + this.id + '">Save</a> \
 					</div>';
 		$("#group_project_list").append( html );
-		requiredFields.push( "project_" + this.id );
+		fieldList.push( "project_" + this.id );
 	});
+	bc_data.requiredFields = fieldList;
+	log( "Field list: " + fieldList );
+	log( "Required fields: " );
+	log( bc_data.requiredFields );
 }
 
 $(document).ready( function() { 
 
 	$("#log").click( function() {
+		log( "Required fields: " );
+		log( bc_data.requiredFields );
 		log(bc_data);
 	});
 	$("#input_accountId").change( function() {
 		clearButton( "goto_2" );
+	});
+	$("#input_list_projects").change( function() {
+		clearButton( "goto_3" );
 	});
 
 	$(".btn_action").live( "click" , function() {
@@ -134,7 +149,7 @@ $(document).ready( function() {
 				$("#step_1").slideUp("fast");
 				$("#step_2").slideDown("fast");
 				progress( 10 );
-				requiredFields = [];
+				bc_data.requiredFields = [];
 				break;
 			case "goto_3":
 				bc_data.overviews.projects = $("#input_list_projects").val();
@@ -144,23 +159,28 @@ $(document).ready( function() {
 				$("#step_2").slideUp("fast");
 				$("#step_3").slideDown("fast");
 				progress( 20 );
-				requiredFields = [];
+				bc_data.requiredFields = [];
 				break;
 			case "goto_4":
+				if( bc_data.requiredFields.length != 0 ) {
+					return false;
+				}
+
 				$("#step_3").slideUp("fast");
 				$("#step_4").slideDown("fast");
-				requiredFields = [];
+				bc_data.requiredFields = [];
 				break;
 			case "goto_5":
 				$("#step_4").slideUp("fast");
 				$("#step_5").slideDown("fast");
-				requiredFields = [];
+				bc_data.requiredFields = [];
 				break;
 			case "storeProjectInfo":
 				var project = $(this).attr("data-project");
 				var input_pair = $(this).attr("data-input");
 				var projectInfo = $("#" + input_pair ).val();
-				bc_data.projects[project].overview = projectInfo;
+				log( "Input Pair: " + input_pair + ", Project: " + project + ", Project Info: " + projectInfo );
+				bc_data.projects[ project ].overview = projectInfo;
 				$(this).attr('disabled',"disabled");
 				trimRequired( "project_" + project , "goto_4" );
 				break;
@@ -230,7 +250,7 @@ $(document).ready( function() {
 			<p>Below is a big block of text in a textarea. Select it all, copy it, and paste it in the box below. Seriously.</p>
 			<p>This is the list of your projects, in case you were wondering.</p>
 			<iframe id="frame_projects" src=""></iframe>
-			<input type="text" id="input_list_projects" alt="Enter the Text Here" title="Enter the Text Here" />
+			<input type="text" id="input_list_projects" alt="Enter the Text Here" title="Enter the Text Here" /><button class="btn btn-success"><i class="icon-hdd icon-white"></i></button> <!-- value="1932925" REMOVE THIS ACCOUNT ID IN THE FUTURE -->
 
 			<button class="btn btn-primary btn-large btn_action  stepper disabled" id="goto_3" style="font-size: 2em;font-family:Ubuntu;" disabled="disabled">
 				Next step, Projects Breakdown
@@ -250,9 +270,9 @@ $(document).ready( function() {
 
 	<div class="row" id="step_4" style="display:none;">
 		<div class="span6 offset3">
-			<p>To begin exporting your data, click this giant button</p>
+			<p>This is where the two projects are located.</p>
 			<button class="btn btn-primary btn-large btn_action stepper disabled" id="goto_5" style="font-size: 2em;font-family:Ubuntu;">
-				
+				Something
 			</button>
 		</div>
 	</div>
